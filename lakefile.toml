@@ -1,0 +1,11 @@
+name = "lean-code"
+version = "0.1.0"
+defaultTargets = ["LeanCode"]
+
+[[lean_lib]]
+name = "LeanCode"
+
+[[require]]
+name = "batteries"
+scope = "leanprover-community"
+rev = "main"
