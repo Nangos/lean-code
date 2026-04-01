@@ -9,3 +9,7 @@ name = "LeanCode"
 name = "batteries"
 scope = "leanprover-community"
 rev = "main"
+
+[[lean_exe]]
+name = "perf_test"
+root = "LeanCode"
