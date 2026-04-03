@@ -38,24 +38,10 @@ namespace TwoSum
 def isSolution (nums : Array Int) (target : Int) (i j : Fin nums.size) : Prop :=
   i ≠ j ∧ nums[i] + nums[j] = target
 
-/-- The relation `isSolution` is symmetric in `i` and `j`. -/
-theorem isSolution.symm (nums : Array Int) (target : Int) (i j : Fin nums.size) :
-    isSolution nums target i j ↔ isSolution nums target j i := by
-  simp [isSolution]; omega
-
 /-- The **triangular** property: WLOG assume `j < i` when searching for a solution. -/
-theorem existsSolution_trangular (nums : Array Int) (target : Int) :
+theorem existsSolution_triangular (nums : Array Int) (target : Int) :
     (∃ i j, isSolution nums target i j) ↔ (∃ i, ∃ j < i, isSolution nums target i j) := by
-  constructor
-  · -- "→": Given a solution `(i, j)`, we can WLOG assume `j < i` by symmetry.
-    rintro ⟨i, j, hIsSolution⟩
-    have hNeq : i < j ∨ j < i := by simp [isSolution] at *; omega
-    cases hNeq with
-    | inl hILtJ => exists j, i; simp [isSolution.symm]; trivial
-    | inr hJLtI => exists i, j
-  · -- "←": Obvious.
-    rintro ⟨i, j, hJLtI, hIsSolution⟩
-    exists i, j
+  simp [isSolution]; grind
 
 /-- Same as `Std.HashMap`. Merely a trick for on-demand dot notation. -/
 abbrev HashMap' := HashMap
@@ -63,39 +49,69 @@ abbrev HashMap' := HashMap
 /-- The `stores` relation: the hashmap `map` stores the first `n` elements of `nums`. -/
 def HashMap'.stores (nums : Array Int) (n : Fin (nums.size + 1))
     (map : HashMap' Int (Fin nums.size)) : Prop :=
-  (∀ k i, map.get? k = some i → i.val < n.val ∧ nums[i] = k) ∧
-  (∀ k, map.get? k = none → ∀ i : Fin n, nums[i] ≠ k)
+  (∀ k i, map.get? k = some i → i < n.val ∧ nums[i] = k) ∧
+  (∀ k, map.get? k = none → ∀ i : Fin nums.size, i < n.val → nums[i] ≠ k)
 
 /-- The recursive helper function for `twoSum`, assuming the first `n` elements are processed. -/
 def twoSumSub (nums : Array Int) (target : Int) (n : Fin (nums.size + 1))
-    (hExistsSub : ∃ i, i.val ≥ n.val ∧ ∃ j < i, isSolution nums target i j)
+    (hExistsSub : ∃ i : Fin nums.size, i ≥ n.val ∧ ∃ j < i, isSolution nums target i j)
     (map : HashMap' Int (Fin nums.size))
     (hMapValid : map.stores nums n)
-    : Σ' i j, isSolution nums target i j :=
-  if hInBound : n < nums.size then
+    : Σ' i j, isSolution nums target i j := by
+  refine if hInBound : n < nums.size then
     let i := n.castLT hInBound
     let complement := target - nums[i]
-    match map.get? complement with
+
+    match hGet : map.get? complement with
     | some j =>  -- Found a solution!
-      have hIsSolution : isSolution nums target i j := sorry
-      ⟨i, j, hIsSolution⟩
-    | none =>  -- Recursively process the rest of the array.
+      ⟨i, j, ?hIsSolution⟩
+    | none =>  -- No solution yet, update the map and continue searching.
       let n' := ⟨n.val + 1, by omega⟩
-      have hExistsSub' : ∃ i, i.val ≥ n.val + 1 ∧ ∃ j < i, isSolution nums target i j := sorry
-      let map' : HashMap' .. := map.insert nums[i] i
-      have hMapValid' : map'.stores nums n' := sorry
-      twoSumSub nums target n' hExistsSub' map' hMapValid'
-  else  -- Actually unreachable, so below is just proof by contradiction.
-    absurd hExistsSub (by omega)
+      let map' := map.insert nums[i] i
+      twoSumSub nums target n' ?hExistsSub' map' ?hMapValid'
+  else  -- Actually unreachable, since we assume a solution exists.
+    False.elim (by omega)
+
+  -- (End algorithm! Below are all proofs...)
+  case hIsSolution =>
+    rcases hMapValid with ⟨hMapSome, -⟩
+    have hFound := hMapSome complement j hGet
+    grind [isSolution]
+
+  case hExistsSub' =>
+    rcases hMapValid with ⟨-, hMapNone⟩
+    have hNotFound : ¬ ∃ j < i, isSolution nums target i j := by
+      grind [isSolution]
+    grind
+
+  case hMapValid' =>
+    rcases hMapValid with ⟨hMapSome, hMapNone⟩
+    subst map'
+    constructor
+    · -- The "some" part
+      rintro k i' hGet'
+      simp [HashMap.getElem?_insert] at hGet'; split at hGet'
+      · grind
+      · have _ := hMapSome k i' hGet'
+        grind
+    · -- The "none" part
+      rintro k hGet' i'
+      simp [HashMap.getElem?_insert] at hGet'; split at hGet'
+      · trivial
+      · have _ := hMapNone k hGet' i'
+        by_cases i' = i <;> grind
 
 /-- The main `twoSum` algorithm. Given a solution `(i, j)` exists, find such one. -/
 def twoSum (nums : Array Int) (target : Int)
     (hExists : ∃ i j, isSolution nums target i j)
-    : Σ' i j, isSolution nums target i j :=
-  have hExistsSub : ∃ i, i.val ≥ 0 ∧ ∃ j < i, isSolution nums target i j := sorry
-  let map : HashMap' .. := {}
-  have hMapValid : map.stores nums 0 := sorry
-  twoSumSub nums target 0 hExistsSub map hMapValid
+    : Σ' i j, isSolution nums target i j := by
+  refine twoSumSub nums target 0 ?hExistsSub {} ?hMapValid
+
+  case hExistsSub =>
+    rw [existsSolution_triangular] at hExists; grind
+
+  case hMapValid =>
+    simp [HashMap'.stores]
 
 
 -- ## Finished!! Now it's time to see our program in action.
@@ -109,15 +125,15 @@ def extract {nums target} (r : Σ' i j, isSolution nums target i j) : Nat × Nat
 
 /-- info: (1, 0) -/
 #guard_msgs in
-#eval! extract <| twoSum #[2, 7, 11, 15] 9 (by simp [isSolution]; decide)
+#eval extract <| twoSum #[2, 7, 11, 15] 9 (by simp [isSolution]; decide)
 
 /-- info: (2, 1) -/
 #guard_msgs in
-#eval! extract <| twoSum #[3, 2, 4] 6 (by simp [isSolution]; decide)
+#eval extract <| twoSum #[3, 2, 4] 6 (by simp [isSolution]; decide)
 
 /-- info: (1, 0) -/
 #guard_msgs in
-#eval! extract <| twoSum #[3, 3] 6 (by simp [isSolution]; decide)
+#eval extract <| twoSum #[3, 3] 6 (by simp [isSolution]; decide)
 
 -- ### Performance Test:
 
@@ -127,9 +143,8 @@ def performanceTest (N : Nat) : IO Unit := do
   let nums := Array.replicate N (0 : Int) ++ #[1, 1]
   let target : Int := 2
   have hExists : ∃ i j, isSolution nums target i j := by
-    have : nums.size = N + 2 := by simp [nums]
-    exists ⟨N + 1, by simp [*]⟩, ⟨N, by simp [*]⟩
-    simp [isSolution, nums, target]
+    exists ⟨N + 1, by grind⟩, ⟨N, by grind⟩
+    grind [isSolution]
 
   let start ← IO.monoMsNow
   let solution := extract <| twoSum nums target hExists
