@@ -7,7 +7,9 @@ This project showcases formally verified implementations of LeetCode problems us
 * **Performance:** Uses Lean's efficient built-in data structures (e.g., `Std.Data.HashMap`) to maintain optimal asymptotic complexity.
 * **Executable:** All verified functions are fully computable and benchmarked.
 
-The initial module, `P0001_TwoSum.lean`, provides a verified $O(n)$ hash map approach to the classic Two Sum problem, demonstrating a high-performance solution that is both mathematically sound and industry-speed ready.
+The initial module, `P0001_TwoSum.lean`, provides a verified $O(n)$ hash map approach to the classic Two Sum problem, demonstrating a solution that is both mathematically sound and industry-speed ready.
+
+**Note:** I am a Lean beginner, and this is a "learn-by-doing" project. Feedback and suggestions are highly welcome!
 
 ---
 
