@@ -18,3 +18,6 @@ To run the performance tests:
 ```bash
 lake exe perf_test
 ```
+
+## Sister Project
+[LeanMath: Constructive Math Problem Solving](https://github.com/Nangos/lean-math)
